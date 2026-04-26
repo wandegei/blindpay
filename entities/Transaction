@@ -1,0 +1,113 @@
+{
+  "name": "Transaction",
+  "type": "object",
+  "properties": {
+    "tx_ref": {
+      "type": "string",
+      "description": "Unique transaction reference"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "Associated order ID"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "deposit",
+        "internal_transfer",
+        "payout",
+        "refund",
+        "reversal"
+      ],
+      "description": "Transaction type"
+    },
+    "from_wallet_id": {
+      "type": "string",
+      "description": "Source wallet ID (null for deposits)"
+    },
+    "to_wallet_id": {
+      "type": "string",
+      "description": "Destination wallet ID (null for payouts)"
+    },
+    "from_provider": {
+      "type": "string",
+      "description": "Source provider name"
+    },
+    "to_provider": {
+      "type": "string",
+      "description": "Destination provider name"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Transaction amount"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "UGX",
+        "KES",
+        "TZS",
+        "RWF",
+        "USD"
+      ],
+      "default": "UGX"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_approval",
+        "approved",
+        "executing",
+        "completed",
+        "rejected",
+        "failed",
+        "reversed",
+        "cancelled"
+      ],
+      "default": "pending_approval"
+    },
+    "stage_index": {
+      "type": "number",
+      "description": "Stage in the order chain this transaction belongs to"
+    },
+    "approval_required_from": {
+      "type": "string",
+      "description": "Role/email that must approve"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Who approved this transaction"
+    },
+    "approved_at": {
+      "type": "string",
+      "description": "Approval timestamp"
+    },
+    "rejected_by": {
+      "type": "string",
+      "description": "Who rejected"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Reason for rejection"
+    },
+    "external_reference": {
+      "type": "string",
+      "description": "External payment gateway reference"
+    },
+    "risk_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "order_id",
+    "type",
+    "amount",
+    "currency"
+  ]
+}

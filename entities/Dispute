@@ -1,0 +1,75 @@
+{
+  "name": "Dispute",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "Associated order ID"
+    },
+    "transaction_id": {
+      "type": "string",
+      "description": "Associated transaction ID if applicable"
+    },
+    "raised_by": {
+      "type": "string",
+      "description": "Email of who raised the dispute"
+    },
+    "raised_by_role": {
+      "type": "string",
+      "enum": [
+        "customer",
+        "provider",
+        "admin"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "description": "Dispute reason"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "non_delivery",
+        "wrong_amount",
+        "unauthorized",
+        "quality_issue",
+        "fraud_suspicion",
+        "other"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "under_review",
+        "resolved_refund",
+        "resolved_release",
+        "resolved_partial",
+        "escalated",
+        "closed"
+      ],
+      "default": "open"
+    },
+    "resolution_notes": {
+      "type": "string"
+    },
+    "resolved_by": {
+      "type": "string"
+    },
+    "resolved_at": {
+      "type": "string"
+    },
+    "evidence_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "order_id",
+    "raised_by",
+    "reason",
+    "category"
+  ]
+}

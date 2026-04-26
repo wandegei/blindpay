@@ -1,0 +1,118 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "order_ref": {
+      "type": "string",
+      "description": "Unique order reference (e.g., ORD-20260412-001)"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Name of the customer"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Customer email"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Customer phone number"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Total order amount in base currency"
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "UGX",
+        "KES",
+        "TZS",
+        "RWF",
+        "USD"
+      ],
+      "default": "UGX"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_deposit",
+        "deposit_received",
+        "in_escrow",
+        "in_transit",
+        "pending_final_approval",
+        "completed",
+        "cancelled",
+        "disputed",
+        "refunded"
+      ],
+      "default": "pending_deposit"
+    },
+    "provider_chain": {
+      "type": "array",
+      "description": "Ordered list of provider IDs in the chain",
+      "items": {
+        "type": "string"
+      }
+    },
+    "current_stage": {
+      "type": "number",
+      "description": "Current stage index in the provider chain (0-based)",
+      "default": 0
+    },
+    "deposit_method": {
+      "type": "string",
+      "enum": [
+        "mtn_momo",
+        "airtel_money",
+        "bank_transfer",
+        "manual"
+      ],
+      "default": "mtn_momo"
+    },
+    "deposit_reference": {
+      "type": "string",
+      "description": "External deposit transaction reference"
+    },
+    "payout_method": {
+      "type": "string",
+      "enum": [
+        "mtn_momo",
+        "airtel_money",
+        "bank_transfer",
+        "manual"
+      ],
+      "default": "mtn_momo"
+    },
+    "payout_reference": {
+      "type": "string",
+      "description": "External payout transaction reference"
+    },
+    "risk_score": {
+      "type": "number",
+      "description": "Computed risk score 0-100",
+      "default": 0
+    },
+    "risk_flags": {
+      "type": "array",
+      "description": "List of risk flag strings",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Admin/system notes"
+    },
+    "frozen": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this order is frozen by admin"
+    }
+  },
+  "required": [
+    "customer_name",
+    "total_amount",
+    "currency"
+  ]
+}

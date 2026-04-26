@@ -1,0 +1,77 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "order_created",
+        "deposit_received",
+        "transfer_initiated",
+        "transfer_approved",
+        "transfer_rejected",
+        "payout_initiated",
+        "payout_completed",
+        "order_frozen",
+        "order_unfrozen",
+        "wallet_frozen",
+        "wallet_unfrozen",
+        "transaction_reversed",
+        "dispute_opened",
+        "dispute_resolved",
+        "manual_override",
+        "risk_flag_raised",
+        "admin_note_added"
+      ],
+      "description": "Type of action"
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "order",
+        "transaction",
+        "wallet",
+        "dispute"
+      ],
+      "description": "Which entity was affected"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID of the affected entity"
+    },
+    "actor_email": {
+      "type": "string",
+      "description": "Who performed the action"
+    },
+    "actor_role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "provider",
+        "system",
+        "customer"
+      ]
+    },
+    "details": {
+      "type": "string",
+      "description": "JSON string of action details"
+    },
+    "previous_state": {
+      "type": "string",
+      "description": "Previous state before action"
+    },
+    "new_state": {
+      "type": "string",
+      "description": "New state after action"
+    },
+    "ip_address": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "action",
+    "entity_type",
+    "entity_id",
+    "actor_email"
+  ]
+}

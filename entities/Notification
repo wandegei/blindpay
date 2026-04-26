@@ -1,0 +1,55 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "order_update",
+        "dispute",
+        "kyc_review",
+        "payment",
+        "risk_flag",
+        "system"
+      ],
+      "default": "system"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical"
+      ],
+      "default": "info"
+    },
+    "entity_type": {
+      "type": "string"
+    },
+    "entity_id": {
+      "type": "string"
+    },
+    "target_email": {
+      "type": "string",
+      "description": "Email of the user this notification targets (empty = all admins)"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false
+    },
+    "read_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "message",
+    "type"
+  ]
+}

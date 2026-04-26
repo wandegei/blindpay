@@ -1,0 +1,85 @@
+{
+  "name": "KycSubmission",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user submitting KYC"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "id_type": {
+      "type": "string",
+      "enum": [
+        "national_id",
+        "passport",
+        "drivers_license",
+        "company_reg"
+      ],
+      "default": "national_id"
+    },
+    "id_number": {
+      "type": "string"
+    },
+    "date_of_birth": {
+      "type": "string"
+    },
+    "nationality": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "document_front_url": {
+      "type": "string",
+      "description": "Uploaded front of ID document"
+    },
+    "document_back_url": {
+      "type": "string",
+      "description": "Uploaded back of ID document"
+    },
+    "selfie_url": {
+      "type": "string",
+      "description": "Selfie for liveness check"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "under_review",
+        "verified",
+        "rejected",
+        "expired"
+      ],
+      "default": "pending"
+    },
+    "verified_at": {
+      "type": "string"
+    },
+    "rejection_reason": {
+      "type": "string"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "low"
+    },
+    "auto_check_passed": {
+      "type": "boolean"
+    },
+    "admin_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "user_email",
+    "full_name",
+    "id_type",
+    "id_number"
+  ]
+}

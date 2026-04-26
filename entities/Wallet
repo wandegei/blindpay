@@ -1,0 +1,81 @@
+{
+  "name": "Wallet",
+  "type": "object",
+  "properties": {
+    "provider_name": {
+      "type": "string",
+      "description": "Provider or entity name"
+    },
+    "provider_email": {
+      "type": "string",
+      "description": "Provider contact email"
+    },
+    "provider_type": {
+      "type": "string",
+      "enum": [
+        "escrow_master",
+        "provider",
+        "customer_refund"
+      ],
+      "default": "provider"
+    },
+    "balance": {
+      "type": "number",
+      "description": "Available balance",
+      "default": 0
+    },
+    "locked_balance": {
+      "type": "number",
+      "description": "Locked/held balance pending approval",
+      "default": 0
+    },
+    "total_received": {
+      "type": "number",
+      "default": 0
+    },
+    "total_sent": {
+      "type": "number",
+      "default": 0
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "UGX",
+        "KES",
+        "TZS",
+        "RWF",
+        "USD"
+      ],
+      "default": "UGX"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "frozen",
+        "suspended",
+        "closed"
+      ],
+      "default": "active"
+    },
+    "frozen_reason": {
+      "type": "string"
+    },
+    "payout_method": {
+      "type": "string",
+      "enum": [
+        "mtn_momo",
+        "airtel_money",
+        "bank_transfer"
+      ]
+    },
+    "payout_details": {
+      "type": "string",
+      "description": "Phone or account number for payouts"
+    }
+  },
+  "required": [
+    "provider_name",
+    "currency"
+  ]
+}
