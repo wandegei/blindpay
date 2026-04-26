@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,39 +26,77 @@ export default function Orders() {
 
   async function loadOrders() {
     setLoading(true);
-    const data = await base44.entities.Order.list("-created_date", 100);
-    setOrders(data);
+
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("created_date", { ascending: false })
+      .limit(100);
+
+    if (error) {
+      console.error("Error loading orders:", error);
+    } else {
+      setOrders(data || []);
+    }
+
     setLoading(false);
   }
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
   const filtered = orders.filter(o => {
-    const matchSearch = !search || 
+    const matchSearch =
+      !search ||
       o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
       o.order_ref?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === "all" || o.status === filterStatus;
+
+    const matchStatus =
+      filterStatus === "all" || o.status === filterStatus;
+
     return matchSearch && matchStatus;
   });
 
   const selectedOrder = orders.find(o => o.id === selectedId);
 
   if (selectedOrder) {
-    return <OrderDetail order={selectedOrder} onBack={() => setSelectedId(null)} onRefresh={loadOrders} />;
+    return (
+      <OrderDetail
+        order={selectedOrder}
+        onBack={() => setSelectedId(null)}
+        onRefresh={loadOrders}
+      />
+    );
   }
 
-  const statuses = ["all", "pending_deposit", "deposit_received", "in_escrow", "in_transit", "pending_final_approval", "completed", "cancelled", "disputed"];
+  const statuses = [
+    "all",
+    "pending_deposit",
+    "deposit_received",
+    "in_escrow",
+    "in_transit",
+    "pending_final_approval",
+    "completed",
+    "cancelled",
+    "disputed",
+  ];
 
   return (
     <div className="space-y-6 animate-slide-in">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
-          <p className="text-sm text-muted-foreground mt-1">{orders.length} total orders</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {orders.length} total orders
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <DownloadReportButton type="orders" data={filtered} />
-          <Button onClick={() => setShowCreate(true)} className="gap-2">
+          <Button
+            onClick={() => setShowCreate(true)}
+            className="gap-2"
+          >
             <Plus className="w-4 h-4" /> New Order
           </Button>
         </div>
@@ -75,14 +113,15 @@ export default function Orders() {
             className="pl-9 bg-card"
           />
         </div>
+
         <div className="flex gap-2 overflow-x-auto pb-1">
           {statuses.map(s => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                filterStatus === s 
-                  ? "bg-primary text-primary-foreground" 
+                filterStatus === s
+                  ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               }`}
             >
@@ -113,34 +152,54 @@ export default function Orders() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((order) => (
+                {filtered.map(order => (
                   <tr
                     key={order.id}
                     onClick={() => setSelectedId(order.id)}
                     className="border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors"
                   >
-                    <td className="px-5 py-3 font-mono text-xs text-primary">{order.order_ref || order.id?.slice(0, 8)}</td>
-                    <td className="px-5 py-3">{order.customer_name}</td>
-                    <td className="px-5 py-3 font-mono">{formatCurrency(order.total_amount, order.currency)}</td>
-                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
-                      {(order.current_stage || 0) + 1}/{(order.provider_chain || []).length || "—"}
+                    <td className="px-5 py-3 font-mono text-xs text-primary">
+                      {order.order_ref || order.id?.slice(0, 8)}
                     </td>
-                    <td className="px-5 py-3"><StatusBadge status={order.status} /></td>
+                    <td className="px-5 py-3">{order.customer_name}</td>
+                    <td className="px-5 py-3 font-mono">
+                      {formatCurrency(order.total_amount, order.currency)}
+                    </td>
+                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
+                      {(order.current_stage || 0) + 1}/
+                      {(order.provider_chain || []).length || "—"}
+                    </td>
                     <td className="px-5 py-3">
-                      <span className={`text-xs font-mono ${
-                        (order.risk_score || 0) > 70 ? "text-red-400" :
-                        (order.risk_score || 0) > 40 ? "text-yellow-400" : "text-emerald-400"
-                      }`}>
+                      <StatusBadge status={order.status} />
+                    </td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`text-xs font-mono ${
+                          (order.risk_score || 0) > 70
+                            ? "text-red-400"
+                            : (order.risk_score || 0) > 40
+                            ? "text-yellow-400"
+                            : "text-emerald-400"
+                        }`}
+                      >
                         {order.risk_score || 0}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-xs text-muted-foreground">{timeAgo(order.created_date)}</td>
+                    <td className="px-5 py-3 text-xs text-muted-foreground">
+                      {timeAgo(order.created_date)}
+                    </td>
                   </tr>
                 ))}
+
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
-                      {search || filterStatus !== "all" ? "No orders match your filters." : "No orders yet."}
+                    <td
+                      colSpan={7}
+                      className="px-5 py-12 text-center text-muted-foreground"
+                    >
+                      {search || filterStatus !== "all"
+                        ? "No orders match your filters."
+                        : "No orders yet."}
                     </td>
                   </tr>
                 )}
@@ -150,7 +209,11 @@ export default function Orders() {
         )}
       </div>
 
-      <CreateOrderDialog open={showCreate} onClose={() => setShowCreate(false)} onCreated={loadOrders} />
+      <CreateOrderDialog
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={loadOrders}
+      />
     </div>
   );
 }

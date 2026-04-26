@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabaseClient";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
@@ -23,11 +23,26 @@ export default function CreateOrderDialog({ open, onClose, onCreated }) {
   });
   const [saving, setSaving] = useState(false);
 
+  // ✅ LOAD WALLETS FROM SUPABASE
   useEffect(() => {
     if (open) {
-      base44.entities.Wallet.list().then(setWallets);
+      loadWallets();
     }
   }, [open]);
+
+  async function loadWallets() {
+    const { data, error } = await supabase
+      .from("wallets")
+      .select("*");
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to load wallets");
+      return;
+    }
+
+    setWallets(data || []);
+  }
 
   const providers = wallets.filter(w => w.provider_type === "provider");
 
@@ -36,17 +51,21 @@ export default function CreateOrderDialog({ open, onClose, onCreated }) {
       const chain = prev.provider_chain.includes(id)
         ? prev.provider_chain.filter(p => p !== id)
         : [...prev.provider_chain, id];
+
       return { ...prev, provider_chain: chain };
     });
   }
 
+  // ✅ CREATE ORDER (SUPABASE)
   async function handleCreate() {
     if (!form.customer_name || !form.total_amount) {
       toast.error("Customer name and amount are required");
       return;
     }
+
     setSaving(true);
-    const order = await base44.entities.Order.create({
+
+    const orderPayload = {
       ...form,
       total_amount: parseFloat(form.total_amount),
       order_ref: generateRef("ORD"),
@@ -55,23 +74,53 @@ export default function CreateOrderDialog({ open, onClose, onCreated }) {
       risk_score: 0,
       risk_flags: [],
       frozen: false,
-    });
+      created_date: new Date().toISOString()
+    };
 
-    await base44.entities.AuditLog.create({
+    const { data: order, error } = await supabase
+      .from("orders")
+      .insert(orderPayload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to create order");
+      setSaving(false);
+      return;
+    }
+
+    // ✅ AUDIT LOG
+    await supabase.from("audit_logs").insert({
       action: "order_created",
       entity_type: "order",
       entity_id: order.id,
       actor_email: "admin",
       actor_role: "admin",
-      details: JSON.stringify({ amount: form.total_amount, currency: form.currency }),
+      details: JSON.stringify({
+        amount: form.total_amount,
+        currency: form.currency
+      }),
       new_state: "pending_deposit",
+      created_at: new Date().toISOString()
     });
 
     toast.success("Order created successfully");
+
     setSaving(false);
     onClose();
     onCreated();
-    setForm({ customer_name: "", customer_email: "", customer_phone: "", total_amount: "", currency: "UGX", deposit_method: "mtn_momo", provider_chain: [] });
+
+    // reset form
+    setForm({
+      customer_name: "",
+      customer_email: "",
+      customer_phone: "",
+      total_amount: "",
+      currency: "UGX",
+      deposit_method: "mtn_momo",
+      provider_chain: [],
+    });
   }
 
   return (
@@ -80,37 +129,72 @@ export default function CreateOrderDialog({ open, onClose, onCreated }) {
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
         </DialogHeader>
+
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label>Customer Name *</Label>
-              <Input value={form.customer_name} onChange={e => setForm(p => ({ ...p, customer_name: e.target.value }))} className="bg-secondary" />
+              <Input
+                value={form.customer_name}
+                onChange={e => setForm(p => ({ ...p, customer_name: e.target.value }))}
+                className="bg-secondary"
+              />
             </div>
+
             <div>
               <Label>Email</Label>
-              <Input value={form.customer_email} onChange={e => setForm(p => ({ ...p, customer_email: e.target.value }))} className="bg-secondary" />
+              <Input
+                value={form.customer_email}
+                onChange={e => setForm(p => ({ ...p, customer_email: e.target.value }))}
+                className="bg-secondary"
+              />
             </div>
+
             <div>
               <Label>Phone</Label>
-              <Input value={form.customer_phone} onChange={e => setForm(p => ({ ...p, customer_phone: e.target.value }))} className="bg-secondary" />
+              <Input
+                value={form.customer_phone}
+                onChange={e => setForm(p => ({ ...p, customer_phone: e.target.value }))}
+                className="bg-secondary"
+              />
             </div>
+
             <div>
               <Label>Amount *</Label>
-              <Input type="number" value={form.total_amount} onChange={e => setForm(p => ({ ...p, total_amount: e.target.value }))} className="bg-secondary" />
+              <Input
+                type="number"
+                value={form.total_amount}
+                onChange={e => setForm(p => ({ ...p, total_amount: e.target.value }))}
+                className="bg-secondary"
+              />
             </div>
+
             <div>
               <Label>Currency</Label>
-              <Select value={form.currency} onValueChange={v => setForm(p => ({ ...p, currency: v }))}>
-                <SelectTrigger className="bg-secondary"><SelectValue /></SelectTrigger>
+              <Select
+                value={form.currency}
+                onValueChange={v => setForm(p => ({ ...p, currency: v }))}
+              >
+                <SelectTrigger className="bg-secondary">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {["UGX", "KES", "TZS", "RWF", "USD"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {["UGX", "KES", "TZS", "RWF", "USD"].map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+
             <div className="col-span-2">
               <Label>Deposit Method</Label>
-              <Select value={form.deposit_method} onValueChange={v => setForm(p => ({ ...p, deposit_method: v }))}>
-                <SelectTrigger className="bg-secondary"><SelectValue /></SelectTrigger>
+              <Select
+                value={form.deposit_method}
+                onValueChange={v => setForm(p => ({ ...p, deposit_method: v }))}
+              >
+                <SelectTrigger className="bg-secondary">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="mtn_momo">MTN MoMo</SelectItem>
                   <SelectItem value="airtel_money">Airtel Money</SelectItem>
@@ -121,9 +205,12 @@ export default function CreateOrderDialog({ open, onClose, onCreated }) {
             </div>
           </div>
 
-          {/* Provider Chain */}
+          {/* PROVIDER CHAIN */}
           <div>
-            <Label className="mb-2 block">Provider Chain (click to add, order matters)</Label>
+            <Label className="mb-2 block">
+              Provider Chain (click to add, order matters)
+            </Label>
+
             <div className="flex flex-wrap gap-2">
               {providers.map(p => (
                 <button
@@ -136,19 +223,28 @@ export default function CreateOrderDialog({ open, onClose, onCreated }) {
                   }`}
                 >
                   {form.provider_chain.includes(p.id) && (
-                    <span className="mr-1 font-mono">{form.provider_chain.indexOf(p.id) + 1}.</span>
+                    <span className="mr-1 font-mono">
+                      {form.provider_chain.indexOf(p.id) + 1}.
+                    </span>
                   )}
                   {p.provider_name}
                 </button>
               ))}
+
               {providers.length === 0 && (
-                <p className="text-xs text-muted-foreground">No providers found. Create wallets first.</p>
+                <p className="text-xs text-muted-foreground">
+                  No providers found. Create wallets first.
+                </p>
               )}
             </div>
           </div>
         </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+
           <Button onClick={handleCreate} disabled={saving}>
             {saving ? "Creating..." : "Create Order"}
           </Button>
