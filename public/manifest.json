@@ -1,0 +1,6 @@
+{
+  "name": "BlindPay",
+  "short_name": "BlindPay",
+  "start_url": ".",
+  "display": "standalone"
+}
