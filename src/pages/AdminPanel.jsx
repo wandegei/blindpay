@@ -92,7 +92,7 @@ export default function AdminPanel() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Alerts */}
+        {/* Alertsbb */}
         <div className="bg-card border border-border rounded-xl p-5">
           <h2 className="text-sm font-semibold mb-4 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-yellow-400" /> Active Alerts
