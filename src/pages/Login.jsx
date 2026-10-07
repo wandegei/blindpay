@@ -10,6 +10,436 @@ import {
 } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 
+/**
+ * @typedef {"login" | "signup"} AuthMode
+ */
+
+/**
+ * @typedef {{
+ *   from?: {
+ *     pathname?: string
+ *   }
+ * }} LocationState
+ */
+
+/* -------------------------------------------------------------------------- */
+/* HELPERS                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @param {unknown} error
+ * @param {string} fallback
+ * @param {string | null} authError
+ * @returns {string}
+ */
+function getErrorMessage(error, fallback, authError) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return authError || fallback;
+}
+
+/**
+ * @param {string} fullName
+ * @param {string} email
+ * @param {string} password
+ * @param {string} confirmPassword
+ * @returns {string}
+ */
+function validateSignup(
+  fullName,
+  email,
+  password,
+  confirmPassword
+) {
+  if (!fullName) {
+    return "Please enter your full name.";
+  }
+
+  if (fullName.length < 2) {
+    return "Please enter your full name.";
+  }
+
+  if (!email) {
+    return "Please enter your email address.";
+  }
+
+  if (!password) {
+    return "Please create a password.";
+  }
+
+  if (password.length < 8) {
+    return "Your password must be at least 8 characters long.";
+  }
+
+  if (!confirmPassword) {
+    return "Please confirm your password.";
+  }
+
+  if (password !== confirmPassword) {
+    return "Passwords do not match.";
+  }
+
+  return "";
+}
+
+/**
+ * @param {string} email
+ * @param {string} password
+ * @returns {string}
+ */
+function validateLogin(email, password) {
+  if (!email) {
+    return "Please enter your email address.";
+  }
+
+  if (!password) {
+    return "Please enter your password.";
+  }
+
+  return "";
+}
+
+/* -------------------------------------------------------------------------- */
+/* MODE TABS                                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @param {{
+ *   mode: AuthMode,
+ *   onChange: (mode: AuthMode) => void,
+ *   disabled: boolean
+ * }} props
+ */
+function ModeTabs({ mode, onChange, disabled }) {
+  const isLogin = mode === "login";
+
+  return (
+    <div className="mb-6 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
+      <button
+        type="button"
+        onClick={() => onChange("login")}
+        disabled={disabled}
+        className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+          isLogin
+            ? "bg-white text-[#960048] shadow-sm"
+            : "text-slate-500 hover:text-slate-700"
+        }`}
+      >
+        Sign in
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onChange("signup")}
+        disabled={disabled}
+        className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+          !isLogin
+            ? "bg-white text-[#960048] shadow-sm"
+            : "text-slate-500 hover:text-slate-700"
+        }`}
+      >
+        Create account
+      </button>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* PASSWORD INPUT                                                             */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @param {{
+ *   id: string,
+ *   value: string,
+ *   onChange: (event: import("react").ChangeEvent<HTMLInputElement>) => void,
+ *   placeholder: string,
+ *   autoComplete: string,
+ *   disabled: boolean,
+ *   visible: boolean,
+ *   onToggle: () => void
+ * }} props
+ */
+function PasswordInput({
+  id,
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  disabled,
+  visible,
+  onToggle,
+}) {
+  return (
+    <div className="relative">
+      <LockKeyhole
+        size={18}
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+      />
+
+      <input
+        id={id}
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        disabled={disabled}
+        className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-11 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
+      />
+
+      <button
+        type="button"
+        onClick={onToggle}
+        disabled={disabled}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+        aria-label={visible ? "Hide password" : "Show password"}
+      >
+        {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* LOGIN FORM                                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @param {{
+ *   email: string,
+ *   password: string,
+ *   setEmail: import("react").Dispatch<import("react").SetStateAction<string>>,
+ *   setPassword: import("react").Dispatch<import("react").SetStateAction<string>>,
+ *   showPassword: boolean,
+ *   setShowPassword: import("react").Dispatch<import("react").SetStateAction<boolean>>,
+ *   isLoadingAuth: boolean,
+ *   onSubmit: (event: import("react").FormEvent<HTMLFormElement>) => Promise<void>
+ * }} props
+ */
+function LoginForm({
+  email,
+  password,
+  setEmail,
+  setPassword,
+  showPassword,
+  setShowPassword,
+  isLoadingAuth,
+  onSubmit,
+}) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-5">
+      <div>
+        <label
+          htmlFor="login-email"
+          className="mb-2 block text-sm font-medium text-slate-700"
+        >
+          Email address
+        </label>
+
+        <div className="relative">
+          <Mail
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+
+          <input
+            id="login-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            disabled={isLoadingAuth}
+            className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label
+          htmlFor="login-password"
+          className="mb-2 block text-sm font-medium text-slate-700"
+        >
+          Password
+        </label>
+
+        <PasswordInput
+          id="login-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="Enter your password"
+          autoComplete="current-password"
+          disabled={isLoadingAuth}
+          visible={showPassword}
+          onToggle={() => setShowPassword((value) => !value)}
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isLoadingAuth}
+        className="flex w-full items-center justify-center rounded-lg bg-[#960048] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#750038] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isLoadingAuth ? "Signing in..." : "Sign in"}
+      </button>
+    </form>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* SIGNUP FORM                                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * @param {{
+ *   fullName: string,
+ *   email: string,
+ *   password: string,
+ *   confirmPassword: string,
+ *   setFullName: import("react").Dispatch<import("react").SetStateAction<string>>,
+ *   setEmail: import("react").Dispatch<import("react").SetStateAction<string>>,
+ *   setPassword: import("react").Dispatch<import("react").SetStateAction<string>>,
+ *   setConfirmPassword: import("react").Dispatch<import("react").SetStateAction<string>>,
+ *   showPassword: boolean,
+ *   showConfirmPassword: boolean,
+ *   setShowPassword: import("react").Dispatch<import("react").SetStateAction<boolean>>,
+ *   setShowConfirmPassword: import("react").Dispatch<import("react").SetStateAction<boolean>>,
+ *   isLoadingAuth: boolean,
+ *   onSubmit: (event: import("react").FormEvent<HTMLFormElement>) => Promise<void>
+ * }} props
+ */
+function SignupForm({
+  fullName,
+  email,
+  password,
+  confirmPassword,
+  setFullName,
+  setEmail,
+  setPassword,
+  setConfirmPassword,
+  showPassword,
+  showConfirmPassword,
+  setShowPassword,
+  setShowConfirmPassword,
+  isLoadingAuth,
+  onSubmit,
+}) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-5">
+      <div>
+        <label
+          htmlFor="signup-name"
+          className="mb-2 block text-sm font-medium text-slate-700"
+        >
+          Full name
+        </label>
+
+        <div className="relative">
+          <User
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+
+          <input
+            id="signup-name"
+            type="text"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            placeholder="Your full name"
+            autoComplete="name"
+            disabled={isLoadingAuth}
+            className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label
+          htmlFor="signup-email"
+          className="mb-2 block text-sm font-medium text-slate-700"
+        >
+          Email address
+        </label>
+
+        <div className="relative">
+          <Mail
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+
+          <input
+            id="signup-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+            autoComplete="email"
+            disabled={isLoadingAuth}
+            className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
+          />
+        </div>
+      </div>
+
+      <div>
+        <label
+          htmlFor="signup-password"
+          className="mb-2 block text-sm font-medium text-slate-700"
+        >
+          Password
+        </label>
+
+        <PasswordInput
+          id="signup-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="At least 8 characters"
+          autoComplete="new-password"
+          disabled={isLoadingAuth}
+          visible={showPassword}
+          onToggle={() => setShowPassword((value) => !value)}
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="signup-confirm-password"
+          className="mb-2 block text-sm font-medium text-slate-700"
+        >
+          Confirm password
+        </label>
+
+        <PasswordInput
+          id="signup-confirm-password"
+          value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)}
+          placeholder="Confirm your password"
+          autoComplete="new-password"
+          disabled={isLoadingAuth}
+          visible={showConfirmPassword}
+          onToggle={() =>
+            setShowConfirmPassword((value) => !value)
+          }
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isLoadingAuth}
+        className="flex w-full items-center justify-center rounded-lg bg-[#960048] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#750038] disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isLoadingAuth ? "Creating account..." : "Create account"}
+      </button>
+    </form>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* PAGE                                                                       */
+/* -------------------------------------------------------------------------- */
+
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -21,18 +451,26 @@ export default function Login() {
     authError,
   } = useAuth();
 
-  /* ---------------- MODE ---------------- */
+  /**
+   * Explicitly widen the initial value to AuthMode.
+   *
+   * Without this, checkJs can infer the state as only "login".
+   *
+   * @type {AuthMode}
+   */
+  const initialMode = "login";
 
-  const [mode, setMode] = useState("login");
+  /**
+   * @type {[AuthMode, import("react").Dispatch<import("react").SetStateAction<AuthMode>>]}
+   */
+  const modeState = useState(/** @type {AuthMode} */ (initialMode));
 
-  /* ---------------- FORM STATE ---------------- */
+  const [mode, setMode] = modeState;
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  /* ---------------- UI STATE ---------------- */
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] =
@@ -41,32 +479,36 @@ export default function Login() {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  /*
-   * If the user was redirected to login from a protected page,
-   * send them back there after successful authentication.
+  /**
+   * @type {LocationState | null}
    */
-  const from = location.state?.from?.pathname || "/";
+  const locationState = location.state;
 
-  /* ---------------- SWITCH MODE ---------------- */
+  const from = locationState?.from?.pathname || "/";
 
-  const switchMode = (newMode) => {
-    setMode(newMode);
-
+  const resetForm = () => {
     setError("");
     setSuccessMessage("");
-
     setFullName("");
     setEmail("");
     setPassword("");
     setConfirmPassword("");
-
     setShowPassword(false);
     setShowConfirmPassword(false);
   };
 
-  /* ---------------- LOGIN ---------------- */
+  /**
+   * @param {AuthMode} newMode
+   */
+  const switchMode = (newMode) => {
+    setMode(newMode);
+    resetForm();
+  };
 
-  /** @param {import("react").FormEvent<HTMLFormElement>} event */
+  /**
+   * @param {import("react").FormEvent<HTMLFormElement>} event
+   * @returns {Promise<void>}
+   */
   const handleLogin = async (event) => {
     event.preventDefault();
 
@@ -74,34 +516,34 @@ export default function Login() {
     setSuccessMessage("");
 
     const cleanEmail = email.trim().toLowerCase();
+    const validationError = validateLogin(
+      cleanEmail,
+      password
+    );
 
-    if (!cleanEmail) {
-      setError("Please enter your email address.");
-      return;
-    }
-
-    if (!password) {
-      setError("Please enter your password.");
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
     try {
       await login(cleanEmail, password);
-
       navigate(from, { replace: true });
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : authError ||
-              "Unable to sign in. Please check your credentials and try again."
+        getErrorMessage(
+          err,
+          "Unable to sign in. Please check your credentials and try again.",
+          authError
+        )
       );
     }
   };
 
-  /* ---------------- SIGN UP ---------------- */
-
-  /** @param {import("react").FormEvent<HTMLFormElement>} event */
+  /**
+   * @param {import("react").FormEvent<HTMLFormElement>} event
+   * @returns {Promise<void>}
+   */
   const handleSignup = async (event) => {
     event.preventDefault();
 
@@ -111,48 +553,15 @@ export default function Login() {
     const cleanName = fullName.trim();
     const cleanEmail = email.trim().toLowerCase();
 
-    /* Validate full name */
+    const validationError = validateSignup(
+      cleanName,
+      cleanEmail,
+      password,
+      confirmPassword
+    );
 
-    if (!cleanName) {
-      setError("Please enter your full name.");
-      return;
-    }
-
-    if (cleanName.length < 2) {
-      setError("Please enter your full name.");
-      return;
-    }
-
-    /* Validate email */
-
-    if (!cleanEmail) {
-      setError("Please enter your email address.");
-      return;
-    }
-
-    /* Validate password */
-
-    if (!password) {
-      setError("Please create a password.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError(
-        "Your password must be at least 8 characters long."
-      );
-      return;
-    }
-
-    /* Validate password confirmation */
-
-    if (!confirmPassword) {
-      setError("Please confirm your password.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -163,10 +572,6 @@ export default function Login() {
         password
       );
 
-      /*
-       * Supabase may require the user to confirm their email
-       * before a session is created.
-       */
       if (result.needsEmailConfirmation) {
         setSuccessMessage(
           "Account created successfully. Please check your email and confirm your account before signing in."
@@ -174,35 +579,27 @@ export default function Login() {
 
         setPassword("");
         setConfirmPassword("");
-
         return;
       }
 
-      /*
-       * If email confirmation is disabled, Supabase can
-       * authenticate the user immediately.
-       */
       navigate(from, { replace: true });
     } catch (err) {
       setError(
-        err instanceof Error
-          ? err.message
-          : authError ||
-              "Unable to create your account. Please try again."
+        getErrorMessage(
+          err,
+          "Unable to create your account. Please try again.",
+          authError
+        )
       );
     }
   };
 
   const isLogin = mode === "login";
 
-  /* ---------------- UI ---------------- */
-
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-
-        {/* ---------------- BRAND ---------------- */}
-
+        {/* BRAND */}
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#960048] text-white">
             <ShieldCheck size={30} />
@@ -217,42 +614,15 @@ export default function Login() {
           </p>
         </div>
 
-        {/* ---------------- CARD ---------------- */}
-
+        {/* CARD */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <ModeTabs
+            mode={mode}
+            onChange={switchMode}
+            disabled={isLoadingAuth}
+          />
 
-          {/* ---------------- MODE TABS ---------------- */}
-
-          <div className="mb-6 grid grid-cols-2 rounded-lg bg-slate-100 p-1">
-            <button
-              type="button"
-              onClick={() => switchMode("login")}
-              disabled={isLoadingAuth}
-              className={`rounded-md px-3 py-2 text-sm font-medium transition ${
-                isLogin
-                  ? "bg-white text-[#960048] shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Sign in
-            </button>
-
-            <button
-              type="button"
-              onClick={() => switchMode("signup")}
-              disabled={isLoadingAuth}
-              className={`rounded-md px-3 py-2 text-sm font-medium transition ${
-                !isLogin
-                  ? "bg-white text-[#960048] shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Create account
-            </button>
-          </div>
-
-          {/* ---------------- HEADING ---------------- */}
-
+          {/* HEADING */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-slate-900">
               {isLogin
@@ -267,332 +637,52 @@ export default function Login() {
             </p>
           </div>
 
-          {/* ---------------- ERROR ---------------- */}
-
+          {/* ERROR */}
           {(error || authError) && (
             <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-5 text-red-700">
               {error || authError}
             </div>
           )}
 
-          {/* ---------------- SUCCESS ---------------- */}
-
+          {/* SUCCESS */}
           {successMessage && (
             <div className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm leading-5 text-green-700">
               {successMessage}
             </div>
           )}
 
-          {/* ---------------- LOGIN FORM ---------------- */}
-
+          {/* FORM */}
           {isLogin ? (
-            <form
+            <LoginForm
+              email={email}
+              password={password}
+              setEmail={setEmail}
+              setPassword={setPassword}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              isLoadingAuth={isLoadingAuth}
               onSubmit={handleLogin}
-              className="space-y-5"
-            >
-
-              {/* Email */}
-
-              <div>
-                <label
-                  htmlFor="login-email"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Email address
-                </label>
-
-                <div className="relative">
-                  <Mail
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    id="login-email"
-                    type="email"
-                    value={email}
-                    onChange={(event) =>
-                      setEmail(event.target.value)
-                    }
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    disabled={isLoadingAuth}
-                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
-                  />
-                </div>
-              </div>
-
-              {/* Password */}
-
-              <div>
-                <label
-                  htmlFor="login-password"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Password
-                </label>
-
-                <div className="relative">
-                  <LockKeyhole
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    id="login-password"
-                    type={
-                      showPassword
-                        ? "text"
-                        : "password"
-                    }
-                    value={password}
-                    onChange={(event) =>
-                      setPassword(event.target.value)
-                    }
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                    disabled={isLoadingAuth}
-                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-11 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPassword(
-                        (value) => !value
-                      )
-                    }
-                    disabled={isLoadingAuth}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    aria-label={
-                      showPassword
-                        ? "Hide password"
-                        : "Show password"
-                    }
-                  >
-                    {showPassword ? (
-                      <EyeOff size={18} />
-                    ) : (
-                      <Eye size={18} />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Submit */}
-
-              <button
-                type="submit"
-                disabled={isLoadingAuth}
-                className="flex w-full items-center justify-center rounded-lg bg-[#960048] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#750038] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isLoadingAuth
-                  ? "Signing in..."
-                  : "Sign in"}
-              </button>
-            </form>
+            />
           ) : (
-            /* ---------------- SIGNUP FORM ---------------- */
-
-            <form
+            <SignupForm
+              fullName={fullName}
+              email={email}
+              password={password}
+              confirmPassword={confirmPassword}
+              setFullName={setFullName}
+              setEmail={setEmail}
+              setPassword={setPassword}
+              setConfirmPassword={setConfirmPassword}
+              showPassword={showPassword}
+              showConfirmPassword={showConfirmPassword}
+              setShowPassword={setShowPassword}
+              setShowConfirmPassword={setShowConfirmPassword}
+              isLoadingAuth={isLoadingAuth}
               onSubmit={handleSignup}
-              className="space-y-5"
-            >
-
-              {/* Full Name */}
-
-              <div>
-                <label
-                  htmlFor="signup-name"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Full name
-                </label>
-
-                <div className="relative">
-                  <User
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    id="signup-name"
-                    type="text"
-                    value={fullName}
-                    onChange={(event) =>
-                      setFullName(event.target.value)
-                    }
-                    placeholder="Your full name"
-                    autoComplete="name"
-                    disabled={isLoadingAuth}
-                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
-                  />
-                </div>
-              </div>
-
-              {/* Email */}
-
-              <div>
-                <label
-                  htmlFor="signup-email"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Email address
-                </label>
-
-                <div className="relative">
-                  <Mail
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    id="signup-email"
-                    type="email"
-                    value={email}
-                    onChange={(event) =>
-                      setEmail(event.target.value)
-                    }
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    disabled={isLoadingAuth}
-                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
-                  />
-                </div>
-              </div>
-
-              {/* Password */}
-
-              <div>
-                <label
-                  htmlFor="signup-password"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Password
-                </label>
-
-                <div className="relative">
-                  <LockKeyhole
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    id="signup-password"
-                    type={
-                      showPassword
-                        ? "text"
-                        : "password"
-                    }
-                    value={password}
-                    onChange={(event) =>
-                      setPassword(event.target.value)
-                    }
-                    placeholder="At least 8 characters"
-                    autoComplete="new-password"
-                    disabled={isLoadingAuth}
-                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-11 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPassword(
-                        (value) => !value
-                      )
-                    }
-                    disabled={isLoadingAuth}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    aria-label={
-                      showPassword
-                        ? "Hide password"
-                        : "Show password"
-                    }
-                  >
-                    {showPassword ? (
-                      <EyeOff size={18} />
-                    ) : (
-                      <Eye size={18} />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password */}
-
-              <div>
-                <label
-                  htmlFor="signup-confirm-password"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Confirm password
-                </label>
-
-                <div className="relative">
-                  <LockKeyhole
-                    size={18}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    id="signup-confirm-password"
-                    type={
-                      showConfirmPassword
-                        ? "text"
-                        : "password"
-                    }
-                    value={confirmPassword}
-                    onChange={(event) =>
-                      setConfirmPassword(
-                        event.target.value
-                      )
-                    }
-                    placeholder="Confirm your password"
-                    autoComplete="new-password"
-                    disabled={isLoadingAuth}
-                    className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-11 text-sm text-slate-900 outline-none transition focus:border-[#960048] focus:ring-2 focus:ring-[#960048]/10"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowConfirmPassword(
-                        (value) => !value
-                      )
-                    }
-                    disabled={isLoadingAuth}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    aria-label={
-                      showConfirmPassword
-                        ? "Hide password"
-                        : "Show password"
-                    }
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff size={18} />
-                    ) : (
-                      <Eye size={18} />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Submit */}
-
-              <button
-                type="submit"
-                disabled={isLoadingAuth}
-                className="flex w-full items-center justify-center rounded-lg bg-[#960048] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#750038] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isLoadingAuth
-                  ? "Creating account..."
-                  : "Create account"}
-              </button>
-            </form>
+            />
           )}
 
-          {/* ---------------- FOOTER MESSAGE ---------------- */}
-
+          {/* FOOTER */}
           <div className="mt-6 border-t border-slate-100 pt-5 text-center">
             <p className="text-xs leading-5 text-slate-500">
               BlindPay provides secure payment and escrow
@@ -602,8 +692,7 @@ export default function Login() {
           </div>
         </div>
 
-        {/* ---------------- BACK ---------------- */}
-
+        {/* BACK */}
         <div className="mt-5 text-center">
           <Link
             to="/"
